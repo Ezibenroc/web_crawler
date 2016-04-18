@@ -35,8 +35,12 @@ class Crawler:
         while len(self.to_visit) > 0:
             self.print_stats()
             origin, target = self.to_visit.pop(0)
-            req=requests.get(target)
-            if target not in self.visited:
+            if target in self.visited:
+                self.graph.add(origin, target)
+            else:
+                req=requests.get(target)
+                if req.status_code != 200:
+                    continue
                 self.visited.add(target)
                 for url in self.url_regexp.findall(req.text):
                     url = urllib.parse.urlparse(url)
