@@ -32,6 +32,12 @@ class Crawler:
         print('len(visited)  = %d' % len(self.visited))
         print('len(to_visit) = %d\n' % len(self.to_visit))
 
+    def find_urls(self, target, req):
+        for url in self.url_regexp.findall(req.text):
+            url = urllib.parse.urlparse(url)
+            self.to_visit.append((target, '%s://%s' % (url.scheme, url.hostname)))
+            self.to_visit.append((target, url.geturl()))
+
     def __crawl__(self, function):
         while len(self.to_visit) > 0:
             self.print_stats()
@@ -42,14 +48,11 @@ class Crawler:
                 req=requests.get(target)
                 if req.status_code != 200:
                     self.errors.append(req)
-                    continue
-                function(req)
-                self.visited.add(target)
-                for url in self.url_regexp.findall(req.text):
-                    url = urllib.parse.urlparse(url)
-                    self.to_visit.append((target, '%s://%s' % (url.scheme, url.hostname)))
-                    self.to_visit.append((target, url.geturl()))
-                self.graph.add(origin, target)
+                else:
+                    function(req)
+                    self.find_urls(target, req)
+                    self.visited.add(target)
+                    self.graph.add(origin, target)
 
     def crawl(self, url=None, function=lambda req: req):
         if url is not None:
