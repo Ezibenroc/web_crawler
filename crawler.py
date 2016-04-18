@@ -1,6 +1,7 @@
 import requests
 import re
 from urllib.parse import urlparse, urljoin, urldefrag
+import time
 
 class Graph:
     def __init__(self):
@@ -27,6 +28,7 @@ class Crawler:
         self.visited = set()
         self.to_visit = []
         self.errors = []
+        self.crawl_time = 0
 
     def print_stats(self):
         print('len(visited)  = %d' % len(self.visited))
@@ -70,9 +72,15 @@ class Crawler:
                     self.graph.add(origin, target)
 
     def crawl(self, url=None, function=lambda req: req):
+        begin = time.time()
         if url is not None:
             self.to_visit.append(('/', url))
         try:
             self.__crawl__(function)
         except KeyboardInterrupt:
+            t = time.time()-begin
+            self.crawl_time += t
+            print('')
+            print('Last crawl time:  %0.2fs' % t)
+            print('Total crawl time: %0.2fs' % self.crawl_time)
             return
