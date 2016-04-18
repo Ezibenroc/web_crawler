@@ -36,6 +36,8 @@ class Crawler:
 
     @staticmethod
     def process_url(url):
+        if url.endswith('/'):
+            url = url[:-1]
         if url.startswith('http'):
             return url
         if url.startswith('//'):
@@ -44,7 +46,11 @@ class Crawler:
 
     def find_urls(self, target, req):
         for url in self.href_regexp.findall(req.text):
-            url = urlparse(self.process_url(urldefrag(url)[0]))
+            try:
+                url = urlparse(self.process_url(urldefrag(url)[0]))
+            except ValueError:
+                self.errors.append(url)
+                continue
             if url.netloc != '': # absolute url
                 self.to_visit.append((target, self.process_url(url.netloc)))
                 self.to_visit.append((target, self.process_url(url.geturl())))
@@ -59,8 +65,10 @@ class Crawler:
                 self.graph.add(origin, target)
             else:
                 try:
-                    req=requests.get(target)
-                except requests.exceptions.RequestException as e:
+                    req=requests.get(target, timeout=5)
+                except Exception as e:
+                    if isinstance(e, KeyboardInterrupt):
+                        raise e
                     self.errors.append(target)
                     continue
                 if req.status_code != 200:
