@@ -1,6 +1,6 @@
 import requests
 import re
-import urllib.parse
+from urllib.parse import urlparse, urljoin, urldefrag
 
 class Graph:
     def __init__(self):
@@ -32,11 +32,22 @@ class Crawler:
         print('len(visited)  = %d' % len(self.visited))
         print('len(to_visit) = %d\n' % len(self.to_visit))
 
+    @staticmethod
+    def process_url(url):
+        if url.startswith('http'):
+            return url
+        if url.startswith('//'):
+            url = url[2:]
+        return 'http://%s' % url
+
     def find_urls(self, target, req):
-        for url in self.url_regexp.findall(req.text):
-            url = urllib.parse.urlparse(url)
-            self.to_visit.append((target, '%s://%s' % (url.scheme, url.hostname)))
-            self.to_visit.append((target, url.geturl()))
+        for url in self.href_regexp.findall(req.text):
+            url = urlparse(self.process_url(urldefrag(url)[0]))
+            if url.netloc != '': # absolute url
+                self.to_visit.append((target, self.process_url(url.netloc)))
+                self.to_visit.append((target, self.process_url(url.geturl())))
+            else: # relative url
+                self.to_visit.append((target, self.process_url(urljoin(target, url.path))))
 
     def __crawl__(self, function):
         while len(self.to_visit) > 0:
@@ -45,9 +56,13 @@ class Crawler:
             if target in self.visited:
                 self.graph.add(origin, target)
             else:
-                req=requests.get(target)
+                try:
+                    req=requests.get(target)
+                except requests.exceptions.RequestException as e:
+                    self.errors.append(target)
+                    continue
                 if req.status_code != 200:
-                    self.errors.append(req)
+                    self.errors.append(target)
                 else:
                     function(req)
                     self.find_urls(target, req)
