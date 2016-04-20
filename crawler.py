@@ -1,5 +1,8 @@
+#! /usr/bin/env python3
+
 import requests
 import re
+import sys
 from urllib.parse import urlparse, urljoin, urldefrag
 import time
 
@@ -58,8 +61,8 @@ class Crawler:
                 self.to_visit.append((target, self.process_url(urljoin(target, url.path))))
 
     def __crawl__(self, function):
-        while len(self.to_visit) > 0:
-            self.print_stats()
+        while len(self.to_visit) > 0 and len(self.visited) < 1000:
+            # self.print_stats()
             origin, target = self.to_visit.pop(0)
             if target in self.visited:
                 self.graph.add(origin, target)
@@ -86,9 +89,21 @@ class Crawler:
         try:
             self.__crawl__(function)
         except KeyboardInterrupt:
-            t = time.time()-begin
-            self.crawl_time += t
-            print('')
-            print('Last crawl time:  %0.2fs' % t)
-            print('Total crawl time: %0.2fs' % self.crawl_time)
-            return
+            pass
+        t = time.time()-begin
+        self.crawl_time += t
+        print('')
+        print('Last crawl time:  %0.2fs' % t)
+        print('Total crawl time: %0.2fs' % self.crawl_time)
+        self.print_stats()
+
+def doWork(url):
+    crawler = Crawler()
+    crawler.crawl(url)
+    print('Thread for url %s finished.' % url)
+
+if __name__ == '__main__':
+    if(len(sys.argv) != 2):
+        print('Syntax: %s <url>' % sys.argv[0])
+        sys.exit(1)
+    doWork(sys.argv[1])
